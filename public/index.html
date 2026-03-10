@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>💰 Expense Tracker</h1>
+      <p>Manage and track your expenses efficiently</p>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="add-expense">Add Expense</button>
+      <button class="tab-btn" data-tab="view-expenses">View Expenses</button>
+      <button class="tab-btn" data-tab="analytics">Analytics</button>
+      <button class="tab-btn" data-tab="logs">Transaction Logs</button>
+      <button class="tab-btn" data-tab="summary">Summary</button>
+    </nav>
+
+    <!-- Add Expense Tab -->
+    <section id="add-expense" class="tab-content active">
+      <div class="form-container">
+        <h2>Add New Expense</h2>
+        <form id="expenseForm">
+          <div class="form-group">
+            <label for="description">Description</label>
+            <input type="text" id="description" placeholder="e.g., Groceries, Gas, Restaurant" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="amount">Amount ($)</label>
+              <input type="number" id="amount" placeholder="0.00" step="0.01" min="0" required>
+            </div>
+
+            <div class="form-group">
+              <label for="category">Category</label>
+              <select id="category" required>
+                <option value="">Select Category</option>
+                <option value="Food">Food & Dining</option>
+                <option value="Transportation">Transportation</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Education">Education</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="date">Date</label>
+              <input type="date" id="date" required>
+            </div>
+
+            <div class="form-group">
+              <label for="payment_method">Payment Method</label>
+              <select id="payment_method">
+                <option value="">Select Method</option>
+                <option value="Cash">Cash</option>
+                <option value="Credit Card">Credit Card</option>
+                <option value="Debit Card">Debit Card</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Digital Wallet">Digital Wallet</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="notes">Notes (Optional)</label>
+            <textarea id="notes" placeholder="Add any additional notes..."></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Add Expense</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- View Expenses Tab -->
+    <section id="view-expenses" class="tab-content">
+      <div class="view-container">
+        <h2>My Expenses</h2>
+        
+        <div class="filter-section">
+          <input type="text" id="searchExpense" placeholder="Search by description...">
+          <select id="categoryFilter">
+            <option value="">All Categories</option>
+            <option value="Food">Food & Dining</option>
+            <option value="Transportation">Transportation</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Healthcare">Healthcare</option>
+            <option value="Education">Education</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div id="expensesList" class="expenses-list">
+          <p class="empty-state">No expenses yet. Add one to get started!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Analytics Tab -->
+    <section id="analytics" class="tab-content">
+      <div class="analytics-container">
+        <h2>Analytics & Visualizations</h2>
+        <p class="info-text">Visual insights powered by Pandas & Matplotlib</p>
+
+        <div class="analytics-controls">
+          <button class="btn btn-primary" onclick="generateVisualizations()">📊 Refresh Charts</button>
+        </div>
+
+        <div class="visualization-section">
+          <div class="chart-container">
+            <h3>Expense Distribution by Category</h3>
+            <div id="categoryPieChart" class="chart">
+              <p class="loading-text">Loading chart...</p>
+            </div>
+            <div id="categoryStats" class="chart-stats"></div>
+          </div>
+        </div>
+
+        <div class="visualization-section">
+          <div class="chart-container">
+            <h3>Monthly Expense Analysis</h3>
+            <div id="monthlyAnalysisChart" class="chart">
+              <p class="loading-text">Loading chart...</p>
+            </div>
+            <div id="monthlyStats" class="chart-stats"></div>
+          </div>
+        </div>
+
+        <div class="visualization-section">
+          <div class="chart-container">
+            <h3>Category Spending Trends</h3>
+            <div id="categoryTrendChart" class="chart">
+              <p class="loading-text">Loading chart...</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="analytics-stats">
+          <h3>Detailed Statistics</h3>
+          <div id="detailedStats" class="stats-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transaction Logs Tab -->
+    <section id="logs" class="tab-content">
+      <div class="logs-container">
+        <h2>Transaction Logs</h2>
+        <p class="info-text">View complete history of all expense modifications</p>
+        
+        <div id="logsList" class="logs-list">
+          <p class="empty-state">No logs yet</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary Tab -->
+    <section id="summary" class="tab-content">
+      <div class="summary-container">
+        <h2>Expense Summary</h2>
+        
+        <div class="summary-cards">
+          <div class="summary-card">
+            <h3>Total Expenses</h3>
+            <p id="totalExpenses" class="summary-value">$0.00</p>
+            <p id="totalCount" class="summary-subtext">0 expenses</p>
+          </div>
+
+          <div class="summary-card">
+            <h3>Average Expense</h3>
+            <p id="averageExpense" class="summary-value">$0.00</p>
+          </div>
+
+          <div class="summary-card">
+            <h3>Last Updated</h3>
+            <p id="lastUpdated" class="summary-value">--</p>
+          </div>
+        </div>
+
+        <h3>Breakdown by Category</h3>
+        <div id="categoryBreakdown" class="category-breakdown">
+          <p class="empty-state">No category data</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Edit Expense</h2>
+      <form id="editForm">
+        <input type="hidden" id="editId">
+        
+        <div class="form-group">
+          <label for="editDescription">Description</label>
+          <input type="text" id="editDescription" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editAmount">Amount ($)</label>
+            <input type="number" id="editAmount" step="0.01" min="0" required>
+          </div>
+
+          <div class="form-group">
+            <label for="editCategory">Category</label>
+            <select id="editCategory" required>
+              <option value="Food">Food & Dining</option>
+              <option value="Transportation">Transportation</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Shopping">Shopping</option>
+              <option value="Utilities">Utilities</option>
+              <option value="Healthcare">Healthcare</option>
+              <option value="Education">Education</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editDate">Date</label>
+            <input type="date" id="editDate" required>
+          </div>
+
+          <div class="form-group">
+            <label for="editPaymentMethod">Payment Method</label>
+            <select id="editPaymentMethod">
+              <option value="">Select Method</option>
+              <option value="Cash">Cash</option>
+              <option value="Credit Card">Credit Card</option>
+              <option value="Debit Card">Debit Card</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Digital Wallet">Digital Wallet</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="editNotes">Notes</label>
+          <textarea id="editNotes"></textarea>
+        </div>
+
+        <div class="button-group">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
