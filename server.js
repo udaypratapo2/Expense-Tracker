@@ -54,6 +54,19 @@ function initializeDatabase() {
       )
     `);
 
+    // Budget targets table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS budget_targets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        target_amount REAL NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(year, month)
+      )
+    `);
+
     console.log('Database schema initialized');
   });
 }
@@ -279,6 +292,131 @@ app.get('/api/summary/by-category', (req, res) => {
         return;
       }
       res.json(rows);
+    }
+  );
+});
+
+// ============= BUDGET MANAGEMENT ENDPOINTS =============
+
+// GET - Get budget target for a specific month
+app.get('/api/budget/:year/:month', (req, res) => {
+  const year = parseInt(req.params.year);
+  const month = parseInt(req.params.month);
+
+  db.get(
+    'SELECT * FROM budget_targets WHERE year = ? AND month = ?',
+    [year, month],
+    (err, row) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      res.json(row || null);
+    }
+  );
+});
+
+// POST - Set or update budget target for a month
+app.post('/api/budget', (req, res) => {
+  const { year, month, target_amount } = req.body;
+
+  if (!year || !month || target_amount === undefined) {
+    res.status(400).json({ error: 'Missing required fields: year, month, target_amount' });
+    return;
+  }
+
+  const targetAmount = parseFloat(target_amount);
+  if (isNaN(targetAmount) || targetAmount < 0) {
+    res.status(400).json({ error: 'Invalid target amount' });
+    return;
+  }
+
+  // Check if budget target already exists
+  db.get(
+    'SELECT id FROM budget_targets WHERE year = ? AND month = ?',
+    [year, month],
+    (err, existing) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+
+      if (existing) {
+        // Update existing
+        db.run(
+          'UPDATE budget_targets SET target_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE year = ? AND month = ?',
+          [targetAmount, year, month],
+          function (err) {
+            if (err) {
+              res.status(500).json({ error: err.message });
+              return;
+            }
+            res.json({ id: existing.id, year, month, target_amount: targetAmount, updated: true });
+          }
+        );
+      } else {
+        // Insert new
+        db.run(
+          'INSERT INTO budget_targets (year, month, target_amount) VALUES (?, ?, ?)',
+          [year, month, targetAmount],
+          function (err) {
+            if (err) {
+              res.status(500).json({ error: err.message });
+              return;
+            }
+            res.json({ id: this.lastID, year, month, target_amount: targetAmount, created: true });
+          }
+        );
+      }
+    }
+  );
+});
+
+// GET - Get current month's budget and spending comparison
+app.get('/api/budget/current-month', (req, res) => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1; // JavaScript months are 0-based
+
+  // Get budget target
+  db.get(
+    'SELECT * FROM budget_targets WHERE year = ? AND month = ?',
+    [year, month],
+    (err, budget) => {
+      if (err) {
+        res.status(500).json({ error: err.message });
+        return;
+      }
+
+      // Get total spending for current month
+      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const endDate = month === 12 ? `${year + 1}-01-01` : `${year}-${(month + 1).toString().padStart(2, '0')}-01`;
+
+      db.get(
+        'SELECT SUM(amount) as total_spent FROM expenses WHERE date >= ? AND date < ?',
+        [startDate, endDate],
+        (err, spending) => {
+          if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+          }
+
+          const totalSpent = spending.total_spent || 0;
+          const targetAmount = budget ? budget.target_amount : 0;
+          const remaining = targetAmount - totalSpent;
+          const percentage = targetAmount > 0 ? (totalSpent / targetAmount) * 100 : 0;
+
+          res.json({
+            year,
+            month,
+            target_amount: targetAmount,
+            total_spent: totalSpent,
+            remaining: remaining,
+            percentage_used: Math.round(percentage * 100) / 100,
+            is_over_budget: remaining < 0
+          });
+        }
+      );
     }
   );
 });

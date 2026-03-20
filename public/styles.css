@@ -464,6 +464,109 @@ header p {
   font-size: 1.1em;
 }
 
+/* Budget Section */
+.budget-section {
+  background: #f9f9f9;
+  padding: 30px;
+  border-radius: 12px;
+  margin-bottom: 40px;
+  border: 1px solid var(--border-color);
+}
+
+.budget-section h3 {
+  margin-bottom: 20px;
+  color: var(--text-color);
+  font-size: 1.4em;
+}
+
+.budget-form {
+  margin-bottom: 20px;
+}
+
+.budget-status {
+  margin-top: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.budget-status .budget-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.budget-metric {
+  text-align: center;
+}
+
+.budget-metric .metric-label {
+  font-size: 0.9em;
+  color: var(--text-light);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.budget-metric .metric-value {
+  font-size: 1.5em;
+  font-weight: 700;
+}
+
+.budget-metric .metric-value.positive {
+  color: var(--primary-color);
+}
+
+.budget-metric .metric-value.negative {
+  color: var(--danger-color);
+}
+
+.budget-progress {
+  margin-top: 15px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background: #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color) 0%, var(--warning-color) 80%, var(--danger-color) 100%);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 0.9em;
+  color: var(--text-light);
+}
+
+.budget-alert {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.budget-alert.over-budget {
+  background: rgba(244, 67, 54, 0.1);
+  color: var(--danger-color);
+  border: 1px solid rgba(244, 67, 54, 0.2);
+}
+
+.budget-alert.on-track {
+  background: rgba(76, 175, 80, 0.1);
+  color: var(--primary-color);
+  border: 1px solid rgba(76, 175, 80, 0.2);
+}
+
 /* Modal */
 .modal {
   display: none;

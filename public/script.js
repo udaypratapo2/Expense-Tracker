@@ -309,9 +309,10 @@ function displayLogs(logs) {
 
 async function loadSummary() {
   try {
-    const [summaryRes, categoryRes] = await Promise.all([
+    const [summaryRes, categoryRes, budgetRes] = await Promise.all([
       fetch(`${API_BASE}/summary`),
-      fetch(`${API_BASE}/summary/by-category`)
+      fetch(`${API_BASE}/summary/by-category`),
+      fetch(`${API_BASE}/budget/current-month`)
     ]);
 
     if (!summaryRes.ok || !categoryRes.ok) {
@@ -320,8 +321,10 @@ async function loadSummary() {
 
     const summary = await summaryRes.json();
     const categories = await categoryRes.json();
+    const budget = budgetRes.ok ? await budgetRes.json() : null;
 
     displaySummary(summary, categories);
+    displayBudgetStatus(budget);
   } catch (error) {
     console.error('Error:', error);
   }
@@ -354,6 +357,115 @@ function displaySummary(summary, categories) {
     </div>
   `).join('');
 }
+
+// ============= BUDGET MANAGEMENT =============
+
+async function setBudgetTarget() {
+  const budgetMonth = document.getElementById('budgetMonth').value;
+  const budgetAmount = document.getElementById('budgetAmount').value;
+
+  if (!budgetMonth || !budgetAmount) {
+    showNotification('Please fill in both month and amount', 'error');
+    return;
+  }
+
+  const [year, month] = budgetMonth.split('-').map(Number);
+
+  try {
+    const response = await fetch(`${API_BASE}/budget`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        year,
+        month,
+        target_amount: parseFloat(budgetAmount)
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to set budget target');
+    }
+
+    const result = await response.json();
+    showNotification(
+      `Budget target ${result.created ? 'set' : 'updated'} successfully!`,
+      'success'
+    );
+
+    // Reload summary to show updated budget
+    loadSummary();
+  } catch (error) {
+    console.error('Error:', error);
+    showNotification('Error setting budget target', 'error');
+  }
+}
+
+function displayBudgetStatus(budget) {
+  const budgetStatus = document.getElementById('budgetStatus');
+
+  if (!budget) {
+    budgetStatus.innerHTML = '<p class="empty-state">Unable to load budget information</p>';
+    return;
+  }
+
+  if (budget.target_amount === 0) {
+    budgetStatus.innerHTML = `
+      <p class="empty-state">No budget target set for current month. Set one above to track your spending!</p>
+    `;
+    return;
+  }
+
+  const progressPercentage = Math.min(budget.percentage_used, 100);
+  const progressClass = budget.is_over_budget ? 'over-budget' : 'on-track';
+  const alertClass = budget.is_over_budget ? 'over-budget' : 'on-track';
+  const alertMessage = budget.is_over_budget 
+    ? `⚠️ Over budget by $${Math.abs(budget.remaining).toFixed(2)}`
+    : `✅ On track - $${budget.remaining.toFixed(2)} remaining`;
+
+  budgetStatus.innerHTML = `
+    <div class="budget-info">
+      <div class="budget-metric">
+        <div class="metric-label">Target</div>
+        <div class="metric-value">$${budget.target_amount.toFixed(2)}</div>
+      </div>
+      <div class="budget-metric">
+        <div class="metric-label">Spent</div>
+        <div class="metric-value">$${budget.total_spent.toFixed(2)}</div>
+      </div>
+      <div class="budget-metric">
+        <div class="metric-label">Remaining</div>
+        <div class="metric-value ${budget.remaining >= 0 ? 'positive' : 'negative'}">
+          $${budget.remaining.toFixed(2)}
+        </div>
+      </div>
+      <div class="budget-metric">
+        <div class="metric-label">Used</div>
+        <div class="metric-value">${budget.percentage_used.toFixed(1)}%</div>
+      </div>
+    </div>
+    
+    <div class="budget-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: ${progressPercentage}%"></div>
+      </div>
+      <div class="progress-text">${budget.percentage_used.toFixed(1)}% of budget used</div>
+    </div>
+    
+    <div class="budget-alert ${alertClass}">
+      ${alertMessage}
+    </div>
+  `;
+}
+
+// Set current month as default for budget input
+document.addEventListener('DOMContentLoaded', function() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  document.getElementById('budgetMonth').value = `${year}-${month}`;
+});
 
 // ============= UTILITY FUNCTIONS =============
 
