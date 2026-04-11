@@ -1,5 +1,6 @@
 // API Base URL
 const API_BASE = 'http://localhost:3000/api';
+const CURRENCY_SYMBOL = '₹';
 
 // DOM Elements
 const expenseForm = document.getElementById('expenseForm');
@@ -14,6 +15,10 @@ const cancelEditBtn = document.getElementById('cancelEdit');
 const searchExpense = document.getElementById('searchExpense');
 const categoryFilter = document.getElementById('categoryFilter');
 
+function formatCurrency(amount) {
+  return `${CURRENCY_SYMBOL}${Number(amount).toFixed(2)}`;
+}
+
 // Set today's date as default
 document.getElementById('date').valueAsDate = new Date();
 
@@ -23,7 +28,7 @@ document.getElementById('date').valueAsDate = new Date();
 tabButtons.forEach(btn => {
   btn.addEventListener('click', () => {
     const tabName = btn.dataset.tab;
-    switchTab(tabName);
+    switchTab(tabName, btn);
   });
 });
 
@@ -53,14 +58,16 @@ categoryFilter.addEventListener('change', displayExpenses);
 
 // ============= TAB MANAGEMENT =============
 
-function switchTab(tabName) {
+function switchTab(tabName, tabButton = null) {
   // Hide all tabs
   tabContents.forEach(tab => tab.classList.remove('active'));
   tabButtons.forEach(btn => btn.classList.remove('active'));
 
   // Show selected tab
   document.getElementById(tabName).classList.add('active');
-  event.target.classList.add('active');
+  if (tabButton) {
+    tabButton.classList.add('active');
+  }
 
   // Load data for the tab
   if (tabName === 'view-expenses') {
@@ -169,7 +176,7 @@ function displayExpenses(expenses) {
               <button class="btn btn-danger" onclick="deleteExpense(${expense.id})">🗑️ Delete</button>
             </div>
           </div>
-          <div class="expense-amount">$${expense.amount.toFixed(2)}</div>
+          <div class="expense-amount">${formatCurrency(expense.amount)}</div>
         </div>
       `).join('');
     })
@@ -335,9 +342,9 @@ function displaySummary(summary, categories) {
   const totalCount = summary.total_expenses || 0;
   const average = totalCount > 0 ? (totalAmount / totalCount).toFixed(2) : '0.00';
 
-  document.getElementById('totalExpenses').textContent = `$${totalAmount.toFixed(2)}`;
+  document.getElementById('totalExpenses').textContent = formatCurrency(totalAmount);
   document.getElementById('totalCount').textContent = `${totalCount} expenses`;
-  document.getElementById('averageExpense').textContent = `$${average}`;
+  document.getElementById('averageExpense').textContent = formatCurrency(average);
   document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
 
   // Display category breakdown
@@ -352,7 +359,7 @@ function displaySummary(summary, categories) {
       <div class="category-name">${escapeHtml(cat.category)}</div>
       <div class="category-stats">
         <span>${cat.count} expense${cat.count !== 1 ? 's' : ''}</span>
-        <span class="category-amount">$${cat.total.toFixed(2)}</span>
+        <span class="category-amount">${formatCurrency(cat.total)}</span>
       </div>
     </div>
   `).join('');
@@ -421,23 +428,23 @@ function displayBudgetStatus(budget) {
   const progressClass = budget.is_over_budget ? 'over-budget' : 'on-track';
   const alertClass = budget.is_over_budget ? 'over-budget' : 'on-track';
   const alertMessage = budget.is_over_budget 
-    ? `⚠️ Over budget by $${Math.abs(budget.remaining).toFixed(2)}`
-    : `✅ On track - $${budget.remaining.toFixed(2)} remaining`;
+    ? `⚠️ Over budget by ${formatCurrency(Math.abs(budget.remaining))}`
+    : `✅ On track - ${formatCurrency(budget.remaining)} remaining`;
 
   budgetStatus.innerHTML = `
     <div class="budget-info">
       <div class="budget-metric">
         <div class="metric-label">Target</div>
-        <div class="metric-value">$${budget.target_amount.toFixed(2)}</div>
+        <div class="metric-value">${formatCurrency(budget.target_amount)}</div>
       </div>
       <div class="budget-metric">
         <div class="metric-label">Spent</div>
-        <div class="metric-value">$${budget.total_spent.toFixed(2)}</div>
+        <div class="metric-value">${formatCurrency(budget.total_spent)}</div>
       </div>
       <div class="budget-metric">
         <div class="metric-label">Remaining</div>
         <div class="metric-value ${budget.remaining >= 0 ? 'positive' : 'negative'}">
-          $${budget.remaining.toFixed(2)}
+          ${formatCurrency(budget.remaining)}
         </div>
       </div>
       <div class="budget-metric">
@@ -688,23 +695,23 @@ async function loadDetailedStats() {
       </div>
       <div class="stat-card">
         <h4>Total Amount Spent</h4>
-        <div class="stat-card-value">$${stats.total_amount.toFixed(2)}</div>
+        <div class="stat-card-value">${formatCurrency(stats.total_amount)}</div>
       </div>
       <div class="stat-card">
         <h4>Average Expense</h4>
-        <div class="stat-card-value">$${stats.average_amount.toFixed(2)}</div>
+        <div class="stat-card-value">${formatCurrency(stats.average_amount)}</div>
       </div>
       <div class="stat-card">
         <h4>Median Expense</h4>
-        <div class="stat-card-value">$${stats.median_amount.toFixed(2)}</div>
+        <div class="stat-card-value">${formatCurrency(stats.median_amount)}</div>
       </div>
       <div class="stat-card">
         <h4>Highest Expense</h4>
-        <div class="stat-card-value">$${stats.max_amount.toFixed(2)}</div>
+        <div class="stat-card-value">${formatCurrency(stats.max_amount)}</div>
       </div>
       <div class="stat-card">
         <h4>Lowest Expense</h4>
-        <div class="stat-card-value">$${stats.min_amount.toFixed(2)}</div>
+        <div class="stat-card-value">${formatCurrency(stats.min_amount)}</div>
       </div>
       <div class="stat-card">
         <h4>Top Category</h4>

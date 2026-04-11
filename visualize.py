@@ -94,21 +94,21 @@ def generate_monthly_analysis(output_path='public/charts/monthly_analysis.png'):
         ax1.bar(range(len(monthly_data)), monthly_data.values, color=colors_bar)
         ax1.set_xticks(range(len(monthly_data)))
         ax1.set_xticklabels(monthly_labels, rotation=45, ha='right')
-        ax1.set_ylabel('Amount ($)', fontsize=11, weight='bold')
+        ax1.set_ylabel('Amount (₹)', fontsize=11, weight='bold')
         ax1.set_xlabel('Month', fontsize=11, weight='bold')
         ax1.set_title('Monthly Expense Totals', fontsize=12, weight='bold')
         ax1.grid(axis='y', alpha=0.3)
         
         # Add value labels on bars
         for i, v in enumerate(monthly_data.values):
-            ax1.text(i, v + 5, f'${v:.0f}', ha='center', va='bottom', fontweight='bold')
+            ax1.text(i, v + 5, f'₹{v:.0f}', ha='center', va='bottom', fontweight='bold')
         
         # Monthly category breakdown (stacked bar)
         df['year_month_str'] = df['date'].dt.to_period('M').astype(str)
         category_monthly = df.groupby(['year_month_str', 'category'])['amount'].sum().unstack(fill_value=0)
         
         category_monthly.plot(kind='bar', stacked=True, ax=ax2, colormap='Set3')
-        ax2.set_ylabel('Amount ($)', fontsize=11, weight='bold')
+        ax2.set_ylabel('Amount (₹)', fontsize=11, weight='bold')
         ax2.set_xlabel('Month', fontsize=11, weight='bold')
         ax2.set_title('Monthly Breakdown by Category', fontsize=12, weight='bold')
         ax2.set_xticklabels(ax2.get_xticklabels(), rotation=45, ha='right')
@@ -162,7 +162,7 @@ def generate_category_trend(output_path='public/charts/category_trend.png'):
         # Formatting
         ax.set_xticks(range(len(trend_data)))
         ax.set_xticklabels([str(period) for period in trend_data.index], rotation=45, ha='right')
-        ax.set_ylabel('Amount ($)', fontsize=11, weight='bold')
+        ax.set_ylabel('Amount (₹)', fontsize=11, weight='bold')
         ax.set_xlabel('Month', fontsize=11, weight='bold')
         ax.set_title('Category Spending Trends (Top 5)', fontsize=12, weight='bold')
         ax.legend(loc='best', fontsize=10)

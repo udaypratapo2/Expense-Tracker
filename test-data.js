@@ -54,7 +54,7 @@ function insertTestData() {
             console.error('Error inserting expense:', err);
           } else {
             inserted++;
-            console.log(`✓ Inserted: ${expense.description} - $${expense.amount}`);
+            console.log(`✓ Inserted: ${expense.description} - ₹${expense.amount}`);
           }
 
           if (inserted === testExpenses.length) {
