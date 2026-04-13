@@ -5,6 +5,8 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const multer = require('multer');
+const csv = require('csv-parser');
 
 const app = express();
 const PORT = 3000;
@@ -13,6 +15,9 @@ const PORT = 3000;
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
+
+// Configure multer for file uploads
+const upload = multer({ dest: 'uploads/' });
 
 // Initialize SQLite Database
 const db = new sqlite3.Database('./expenses.db', (err) => {
@@ -51,6 +56,20 @@ function initializeDatabase() {
         new_value TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(expense_id) REFERENCES expenses(id)
+      )
+    `);
+
+    // Bank transactions table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS bank_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        description TEXT NOT NULL,
+        amount REAL NOT NULL,
+        type TEXT NOT NULL, -- 'credit' or 'debit'
+        balance REAL,
+        category TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -419,6 +438,171 @@ app.get('/api/budget/current-month', (req, res) => {
       );
     }
   );
+});
+
+// ============= BANK STATEMENT ENDPOINTS =============
+
+// POST - Upload and parse bank statement CSV
+app.post('/api/bank-statement/upload', upload.single('statement'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  const filePath = req.file.path;
+  const transactions = [];
+
+  fs.createReadStream(filePath)
+    .pipe(csv())
+    .on('data', (row) => {
+      // Assuming CSV has columns: date, description, amount, balance (optional)
+      // Normalize column names (case insensitive)
+      const normalizedRow = {};
+      Object.keys(row).forEach(key => {
+        normalizedRow[key.toLowerCase()] = row[key];
+      });
+
+      const date = normalizedRow.date || normalizedRow.transaction_date || normalizedRow['date/time'];
+      const description = normalizedRow.description || normalizedRow.details || normalizedRow.narration;
+      let amount = parseFloat(normalizedRow.amount || normalizedRow.value || '0');
+      const balance = parseFloat(normalizedRow.balance || '0');
+
+      if (date && description && !isNaN(amount)) {
+        // Determine type based on amount sign
+        const type = amount >= 0 ? 'credit' : 'debit';
+        amount = Math.abs(amount); // Store positive amount
+
+        transactions.push({
+          date,
+          description,
+          amount,
+          type,
+          balance: isNaN(balance) ? null : balance
+        });
+      }
+    })
+    .on('end', () => {
+      // Insert transactions into database
+      const stmt = db.prepare(`
+        INSERT INTO bank_transactions (date, description, amount, type, balance)
+        VALUES (?, ?, ?, ?, ?)
+      `);
+
+      let inserted = 0;
+      transactions.forEach(tx => {
+        stmt.run([tx.date, tx.description, tx.amount, tx.type, tx.balance], function(err) {
+          if (!err) inserted++;
+        });
+      });
+      stmt.finalize();
+
+      // Clean up uploaded file
+      fs.unlinkSync(filePath);
+
+      res.json({
+        success: true,
+        message: `Successfully processed ${inserted} transactions`,
+        totalParsed: transactions.length,
+        inserted
+      });
+    })
+    .on('error', (error) => {
+      // Clean up uploaded file
+      fs.unlinkSync(filePath);
+      res.status(500).json({ error: 'Failed to parse CSV', details: error.message });
+    });
+});
+
+// GET - Get bank statement insights
+app.get('/api/bank-statement/insights', (req, res) => {
+  db.all('SELECT * FROM bank_transactions ORDER BY date DESC', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (rows.length === 0) {
+      return res.json({
+        totalTransactions: 0,
+        totalCredits: 0,
+        totalDebits: 0,
+        netFlow: 0,
+        insights: []
+      });
+    }
+
+    let totalCredits = 0;
+    let totalDebits = 0;
+    const categoryCounts = {};
+    const monthlyData = {};
+
+    rows.forEach(tx => {
+      if (tx.type === 'credit') {
+        totalCredits += tx.amount;
+      } else {
+        totalDebits += tx.amount;
+      }
+
+      // Simple categorization based on description keywords
+      const desc = tx.description.toLowerCase();
+      let category = 'Other';
+      if (desc.includes('salary') || desc.includes('deposit') || desc.includes('transfer in')) {
+        category = 'Income';
+      } else if (desc.includes('grocery') || desc.includes('food') || desc.includes('restaurant')) {
+        category = 'Food';
+      } else if (desc.includes('gas') || desc.includes('fuel') || desc.includes('transport')) {
+        category = 'Transportation';
+      } else if (desc.includes('shopping') || desc.includes('amazon') || desc.includes('store')) {
+        category = 'Shopping';
+      } else if (desc.includes('utility') || desc.includes('electric') || desc.includes('water')) {
+        category = 'Utilities';
+      } else if (desc.includes('atm') || desc.includes('withdrawal')) {
+        category = 'Cash Withdrawal';
+      }
+
+      tx.category = category;
+      categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+
+      // Monthly aggregation
+      const month = tx.date.substring(0, 7); // YYYY-MM
+      if (!monthlyData[month]) {
+        monthlyData[month] = { credits: 0, debits: 0 };
+      }
+      if (tx.type === 'credit') {
+        monthlyData[month].credits += tx.amount;
+      } else {
+        monthlyData[month].debits += tx.amount;
+      }
+    });
+
+    const insights = [
+      `Total transactions: ${rows.length}`,
+      `Total credits: ₹${totalCredits.toFixed(2)}`,
+      `Total debits: ₹${totalDebits.toFixed(2)}`,
+      `Net flow: ₹${(totalCredits - totalDebits).toFixed(2)}`,
+      `Most common category: ${Object.keys(categoryCounts).reduce((a, b) => categoryCounts[a] > categoryCounts[b] ? a : b)}`
+    ];
+
+    res.json({
+      totalTransactions: rows.length,
+      totalCredits,
+      totalDebits,
+      netFlow: totalCredits - totalDebits,
+      categoryBreakdown: categoryCounts,
+      monthlyBreakdown: monthlyData,
+      insights,
+      recentTransactions: rows.slice(0, 10)
+    });
+  });
+});
+
+// GET - Get all bank transactions
+app.get('/api/bank-transactions', (req, res) => {
+  db.all('SELECT * FROM bank_transactions ORDER BY date DESC', [], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows);
+  });
 });
 
 // ============= VISUALIZATION ENDPOINTS =============

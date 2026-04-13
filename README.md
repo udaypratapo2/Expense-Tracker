@@ -12,6 +12,30 @@ A modern, full-featured web application for tracking and managing your expenses 
 - **Transaction Logs**: Complete audit trail of all expense modifications
 - **Summary & Analytics**: View spending statistics and category breakdown
 - **Advanced Visualizations**: Pie charts, monthly analysis, and trend analysis powered by Pandas & Matplotlib
+- **Bank Statement Upload**: Upload CSV bank statements for automatic transaction analysis and insights
+
+### 🏦 Bank Statement Analysis
+- **CSV Upload**: Support for standard bank statement CSV formats
+- **Automatic Parsing**: Intelligent detection of date, description, amount, and balance columns
+- **Transaction Insights**: Total credits, debits, net flow, and spending patterns
+- **Category Classification**: Automatic categorization of transactions (Income, Food, Transportation, etc.)
+- **Monthly Breakdown**: Analysis of spending and income trends over time
+- **Recent Transactions**: View latest bank transactions with categorization
+
+### 📄 Bank Statement CSV Format
+The application supports flexible CSV formats. Common column names are automatically detected:
+- **Date**: `date`, `transaction_date`, `date/time`
+- **Description**: `description`, `details`, `narration`
+- **Amount**: `amount`, `value` (positive for credits, negative for debits)
+- **Balance**: `balance` (optional)
+
+Example CSV format:
+```csv
+Date,Description,Amount,Balance
+2024-01-01,Salary Deposit,50000.00,50000.00
+2024-01-02,Grocery Store,-2500.00,47500.00
+2024-01-03,ATM Withdrawal,-5000.00,42500.00
+```
 
 ### 🎯 Categories
 - Food & Dining

@@ -17,6 +17,7 @@
     <nav class="tabs">
       <button class="tab-btn active" data-tab="add-expense">Add Expense</button>
       <button class="tab-btn" data-tab="view-expenses">View Expenses</button>
+      <button class="tab-btn" data-tab="bank-statement">Bank Statement</button>
       <button class="tab-btn" data-tab="analytics">Analytics</button>
       <button class="tab-btn" data-tab="logs">Transaction Logs</button>
       <button class="tab-btn" data-tab="summary">Summary</button>
@@ -105,6 +106,40 @@
 
         <div id="expensesList" class="expenses-list">
           <p class="empty-state">No expenses yet. Add one to get started!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bank Statement Tab -->
+    <section id="bank-statement" class="tab-content">
+      <div class="bank-container">
+        <h2>Bank Statement Analysis</h2>
+        <p class="info-text">Upload your bank statement CSV to get insights and analysis</p>
+
+        <div class="upload-section">
+          <div class="upload-form">
+            <input type="file" id="statementFile" accept=".csv" style="display: none;">
+            <button class="btn btn-primary" onclick="document.getElementById('statementFile').click()">
+              📄 Choose CSV File
+            </button>
+            <span id="fileName">No file selected</span>
+            <button class="btn btn-secondary" onclick="uploadStatement()">Upload & Analyze</button>
+          </div>
+          <div id="uploadStatus" class="upload-status"></div>
+        </div>
+
+        <div class="insights-section">
+          <h3>Financial Insights</h3>
+          <div id="insightsCards" class="insights-cards">
+            <p class="empty-state">Upload a bank statement to see insights</p>
+          </div>
+        </div>
+
+        <div class="transactions-section">
+          <h3>Recent Transactions</h3>
+          <div id="bankTransactions" class="bank-transactions">
+            <p class="empty-state">No transactions yet</p>
+          </div>
         </div>
       </div>
     </section>

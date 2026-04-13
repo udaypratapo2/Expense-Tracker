@@ -76,6 +76,8 @@ function switchTab(tabName, tabButton = null) {
     loadLogs();
   } else if (tabName === 'summary') {
     loadSummary();
+  } else if (tabName === 'bank-statement') {
+    loadBankInsights();
   }
 }
 
@@ -473,6 +475,139 @@ document.addEventListener('DOMContentLoaded', function() {
   const month = (now.getMonth() + 1).toString().padStart(2, '0');
   document.getElementById('budgetMonth').value = `${year}-${month}`;
 });
+
+// ============= BANK STATEMENT MANAGEMENT =============
+
+let selectedFile = null;
+
+document.getElementById('statementFile').addEventListener('change', function(e) {
+  selectedFile = e.target.files[0];
+  document.getElementById('fileName').textContent = selectedFile ? selectedFile.name : 'No file selected';
+});
+
+async function uploadStatement() {
+  if (!selectedFile) {
+    showNotification('Please select a CSV file first', 'error');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('statement', selectedFile);
+
+  const uploadStatus = document.getElementById('uploadStatus');
+  uploadStatus.innerHTML = '<p class="loading-text">Uploading and processing...</p>';
+
+  try {
+    const response = await fetch(`${API_BASE}/bank-statement/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload statement');
+    }
+
+    const result = await response.json();
+    uploadStatus.innerHTML = `
+      <div class="success-message">
+        ✅ Successfully processed ${result.inserted} transactions out of ${result.totalParsed} parsed.
+      </div>
+    `;
+
+    showNotification('Bank statement uploaded successfully!', 'success');
+    
+    // Reset file input
+    document.getElementById('statementFile').value = '';
+    document.getElementById('fileName').textContent = 'No file selected';
+    selectedFile = null;
+
+    // Load insights
+    loadBankInsights();
+  } catch (error) {
+    console.error('Error:', error);
+    uploadStatus.innerHTML = '<p class="error-message">❌ Error uploading statement. Please check the file format.</p>';
+    showNotification('Error uploading bank statement', 'error');
+  }
+}
+
+async function loadBankInsights() {
+  try {
+    const response = await fetch(`${API_BASE}/bank-statement/insights`);
+    if (!response.ok) {
+      throw new Error('Failed to load insights');
+    }
+
+    const data = await response.json();
+    displayBankInsights(data);
+    displayBankTransactions(data.recentTransactions || []);
+  } catch (error) {
+    console.error('Error:', error);
+    document.getElementById('insightsCards').innerHTML = '<p class="empty-state">Error loading insights</p>';
+    document.getElementById('bankTransactions').innerHTML = '<p class="empty-state">Error loading transactions</p>';
+  }
+}
+
+function displayBankInsights(data) {
+  const insightsCards = document.getElementById('insightsCards');
+
+  if (data.totalTransactions === 0) {
+    insightsCards.innerHTML = '<p class="empty-state">Upload a bank statement to see insights</p>';
+    return;
+  }
+
+  insightsCards.innerHTML = `
+    <div class="insight-card">
+      <h4>Total Transactions</h4>
+      <div class="insight-value">${data.totalTransactions}</div>
+    </div>
+    <div class="insight-card">
+      <h4>Total Credits</h4>
+      <div class="insight-value positive">${formatCurrency(data.totalCredits)}</div>
+    </div>
+    <div class="insight-card">
+      <h4>Total Debits</h4>
+      <div class="insight-value negative">${formatCurrency(data.totalDebits)}</div>
+    </div>
+    <div class="insight-card">
+      <h4>Net Flow</h4>
+      <div class="insight-value ${data.netFlow >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.netFlow)}</div>
+    </div>
+  `;
+
+  // Add insights list
+  const insightsList = data.insights.map(insight => `<li>${insight}</li>`).join('');
+  insightsCards.innerHTML += `
+    <div class="insight-card full-width">
+      <h4>Key Insights</h4>
+      <ul class="insights-list">${insightsList}</ul>
+    </div>
+  `;
+}
+
+function displayBankTransactions(transactions) {
+  const bankTransactions = document.getElementById('bankTransactions');
+
+  if (transactions.length === 0) {
+    bankTransactions.innerHTML = '<p class="empty-state">No transactions yet</p>';
+    return;
+  }
+
+  bankTransactions.innerHTML = transactions.map(tx => `
+    <div class="bank-transaction-item">
+      <div class="transaction-info">
+        <div class="transaction-header">
+          <span class="transaction-description">${escapeHtml(tx.description)}</span>
+          <span class="transaction-category">${escapeHtml(tx.category || 'Uncategorized')}</span>
+        </div>
+        <div class="transaction-details">
+          <span class="transaction-detail">📅 ${formatDate(tx.date)}</span>
+          <span class="transaction-type ${tx.type}">${tx.type.toUpperCase()}</span>
+        </div>
+      </div>
+      <div class="transaction-amount ${tx.type}">${formatCurrency(tx.amount)}</div>
+    </div>
+  `).join('');
+}
 
 // ============= UTILITY FUNCTIONS =============
 
