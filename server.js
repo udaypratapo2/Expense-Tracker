@@ -481,28 +481,51 @@ app.post('/api/bank-statement/upload', upload.single('statement'), (req, res) =>
       }
     })
     .on('end', () => {
-      // Insert transactions into database
-      const stmt = db.prepare(`
-        INSERT INTO bank_transactions (date, description, amount, type, balance)
-        VALUES (?, ?, ?, ?, ?)
-      `);
-
-      let inserted = 0;
-      transactions.forEach(tx => {
-        stmt.run([tx.date, tx.description, tx.amount, tx.type, tx.balance], function(err) {
-          if (!err) inserted++;
+      console.log(`CSV parsing complete. Found ${transactions.length} transactions`);
+      
+      if (transactions.length === 0) {
+        // Clean up uploaded file
+        fs.unlinkSync(filePath);
+        return res.json({
+          success: true,
+          message: 'No valid transactions found in CSV',
+          totalParsed: 0,
+          inserted: 0
         });
-      });
-      stmt.finalize();
+      }
 
-      // Clean up uploaded file
-      fs.unlinkSync(filePath);
+      // Insert transactions into database
+      let inserted = 0;
+      let completed = 0;
 
-      res.json({
-        success: true,
-        message: `Successfully processed ${inserted} transactions`,
-        totalParsed: transactions.length,
-        inserted
+      console.log('Starting database insertions...');
+      transactions.forEach(tx => {
+        db.run(
+          `INSERT INTO bank_transactions (date, description, amount, type, balance) VALUES (?, ?, ?, ?, ?)`,
+          [tx.date, tx.description, tx.amount, tx.type, tx.balance],
+          function(err) {
+            completed++;
+            console.log(`Completed ${completed}/${transactions.length}, err:`, err ? err.message : 'none');
+            if (!err) {
+              inserted++;
+            }
+            
+            // When all insertions are complete
+            if (completed === transactions.length) {
+              // Clean up uploaded file
+              fs.unlinkSync(filePath);
+
+              console.log(`Final result: inserted=${inserted}, total=${transactions.length}`);
+              res.json({
+                success: true,
+                message: `Successfully processed ${inserted} transactions`,
+                totalParsed: transactions.length,
+                inserted,
+                debug: `inserted=${inserted}, completed=${completed}`
+              });
+            }
+          }
+        );
       });
     })
     .on('error', (error) => {
