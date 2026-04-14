@@ -455,21 +455,47 @@ app.post('/api/bank-statement/upload', upload.single('statement'), (req, res) =>
     .pipe(csv())
     .on('data', (row) => {
       // Assuming CSV has columns: date, description, amount, balance (optional)
-      // Normalize column names (case insensitive)
+      // Normalize column names (case insensitive and remove spaces/underscores)
       const normalizedRow = {};
       Object.keys(row).forEach(key => {
-        normalizedRow[key.toLowerCase()] = row[key];
+        const cleanKey = key.toLowerCase().replace(/[\s_]+/g, '');
+        normalizedRow[cleanKey] = row[key];
       });
 
-      const date = normalizedRow.date || normalizedRow.transaction_date || normalizedRow['date/time'];
+      const date = normalizedRow.date || normalizedRow.transactiondate || normalizedRow.datetime;
       const description = normalizedRow.description || normalizedRow.details || normalizedRow.narration;
-      let amount = parseFloat(normalizedRow.amount || normalizedRow.value || '0');
-      const balance = parseFloat(normalizedRow.balance || '0');
+      
+      // Handle different amount formats
+      let amount = 0;
+      let type = 'debit';
+      
+      if (normalizedRow.amount || normalizedRow.value) {
+        // Single amount column with sign
+        let amountStr = normalizedRow.amount || normalizedRow.value || '0';
+        amountStr = amountStr.replace(/[$,\s]/g, '');
+        amount = parseFloat(amountStr);
+        type = amount >= 0 ? 'credit' : 'debit';
+        amount = Math.abs(amount);
+      } else if (normalizedRow.debit || normalizedRow.credit) {
+        // Separate debit/credit columns
+        const debitStr = (normalizedRow.debit || '0').replace(/[$,\s]/g, '');
+        const creditStr = (normalizedRow.credit || '0').replace(/[$,\s]/g, '');
+        const debit = parseFloat(debitStr) || 0;
+        const credit = parseFloat(creditStr) || 0;
+        
+        if (debit > 0) {
+          amount = debit;
+          type = 'debit';
+        } else if (credit > 0) {
+          amount = credit;
+          type = 'credit';
+        }
+      }
+      
+      const balanceStr = normalizedRow.balance || '0';
+      const balance = parseFloat(balanceStr.replace(/[$,\s]/g, ''));
 
-      if (date && description && !isNaN(amount)) {
-        // Determine type based on amount sign
-        const type = amount >= 0 ? 'credit' : 'debit';
-        amount = Math.abs(amount); // Store positive amount
+      if (date && description && amount > 0) {
 
         transactions.push({
           date,
