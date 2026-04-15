@@ -128,6 +128,17 @@
           <div id="uploadStatus" class="upload-status"></div>
         </div>
 
+        <div class="reset-section">
+          <h3>Reset Data for Specific File</h3>
+          <div class="reset-form">
+            <select id="resetFileSelect">
+              <option value="">Select a file to reset</option>
+            </select>
+            <button class="btn btn-danger" onclick="resetFileData()">Reset Data</button>
+          </div>
+          <div id="resetStatus" class="reset-status"></div>
+        </div>
+
         <div class="insights-section">
           <h3>Financial Insights</h3>
           <div id="insightsCards" class="insights-cards">

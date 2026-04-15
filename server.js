@@ -69,9 +69,24 @@ function initializeDatabase() {
         type TEXT NOT NULL, -- 'credit' or 'debit'
         balance REAL,
         category TEXT,
+        file_name TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add file_name column if it doesn't exist (for migration)
+    db.run(`ALTER TABLE bank_transactions ADD COLUMN file_name TEXT`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding file_name column:', err);
+      } else {
+        // Update existing records with NULL file_name
+        db.run(`UPDATE bank_transactions SET file_name = 'legacy_upload.csv' WHERE file_name IS NULL`, (updateErr) => {
+          if (updateErr) {
+            console.error('Error updating legacy file_names:', updateErr);
+          }
+        });
+      }
+    });
 
     // Budget targets table
     db.run(`
@@ -502,7 +517,8 @@ app.post('/api/bank-statement/upload', upload.single('statement'), (req, res) =>
           description,
           amount,
           type,
-          balance: isNaN(balance) ? null : balance
+          balance: isNaN(balance) ? null : balance,
+          file_name: req.file.originalname
         });
       }
     })
@@ -527,8 +543,8 @@ app.post('/api/bank-statement/upload', upload.single('statement'), (req, res) =>
       console.log('Starting database insertions...');
       transactions.forEach(tx => {
         db.run(
-          `INSERT INTO bank_transactions (date, description, amount, type, balance) VALUES (?, ?, ?, ?, ?)`,
-          [tx.date, tx.description, tx.amount, tx.type, tx.balance],
+          `INSERT INTO bank_transactions (date, description, amount, type, balance, file_name) VALUES (?, ?, ?, ?, ?, ?)`,
+          [tx.date, tx.description, tx.amount, tx.type, tx.balance, tx.file_name],
           function(err) {
             completed++;
             console.log(`Completed ${completed}/${transactions.length}, err:`, err ? err.message : 'none');
@@ -639,6 +655,32 @@ app.get('/api/bank-statement/insights', (req, res) => {
       monthlyBreakdown: monthlyData,
       insights,
       recentTransactions: rows.slice(0, 10)
+    });
+  });
+});
+
+// GET - Get list of uploaded CSV files
+app.get('/api/bank-statement/files', (req, res) => {
+  db.all('SELECT DISTINCT file_name FROM bank_transactions WHERE file_name IS NOT NULL ORDER BY file_name', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    const files = rows.map(row => row.file_name);
+    res.json({ files });
+  });
+});
+
+// DELETE - Delete transactions for a specific file
+app.delete('/api/bank-statement/reset/:fileName', (req, res) => {
+  const fileName = req.params.fileName;
+  db.run('DELETE FROM bank_transactions WHERE file_name = ?', [fileName], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ 
+      success: true, 
+      message: `Deleted ${this.changes} transactions from ${fileName}`,
+      deletedCount: this.changes 
     });
   });
 });

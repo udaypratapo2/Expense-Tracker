@@ -530,6 +530,64 @@ async function uploadStatement() {
   }
 }
 
+async function loadResetFiles() {
+  try {
+    const response = await fetch(`${API_BASE}/bank-statement/files`);
+    if (!response.ok) {
+      throw new Error('Failed to load files');
+    }
+
+    const data = await response.json();
+    const select = document.getElementById('resetFileSelect');
+    select.innerHTML = '<option value="">Select a file to reset</option>';
+    data.files.forEach(file => {
+      const option = document.createElement('option');
+      option.value = file;
+      option.textContent = file;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error loading files:', error);
+  }
+}
+
+async function resetFileData() {
+  const select = document.getElementById('resetFileSelect');
+  const fileName = select.value;
+  if (!fileName) {
+    showNotification('Please select a file to reset', 'error');
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to delete all transactions from "${fileName}"? This action cannot be undone.`)) {
+    return;
+  }
+
+  const resetStatus = document.getElementById('resetStatus');
+  resetStatus.innerHTML = '<p class="loading-text">Deleting transactions...</p>';
+
+  try {
+    const response = await fetch(`${API_BASE}/bank-statement/reset/${encodeURIComponent(fileName)}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to reset data');
+    }
+
+    const result = await response.json();
+    resetStatus.innerHTML = `<div class="success-message">✅ Successfully deleted ${result.deletedCount} transactions from ${fileName}.</div>`;
+    showNotification('Data reset successfully!', 'success');
+
+    // Reload insights and files
+    loadBankInsights();
+  } catch (error) {
+    console.error('Error:', error);
+    resetStatus.innerHTML = '<p class="error-message">❌ Error resetting data.</p>';
+    showNotification('Error resetting data', 'error');
+  }
+}
+
 async function loadBankInsights() {
   try {
     const response = await fetch(`${API_BASE}/bank-statement/insights`);
@@ -540,6 +598,7 @@ async function loadBankInsights() {
     const data = await response.json();
     displayBankInsights(data);
     displayBankTransactions(data.recentTransactions || []);
+    loadResetFiles();
   } catch (error) {
     console.error('Error:', error);
     document.getElementById('insightsCards').innerHTML = '<p class="empty-state">Error loading insights</p>';
