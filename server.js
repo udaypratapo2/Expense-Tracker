@@ -412,10 +412,10 @@ app.get('/api/budget/current-month', (req, res) => {
   const year = now.getFullYear();
   const month = now.getMonth() + 1; // JavaScript months are 0-based
 
-  // Get budget target
+  // Get budget target - use current month if set, otherwise most recent previous
   db.get(
-    'SELECT * FROM budget_targets WHERE year = ? AND month = ?',
-    [year, month],
+    'SELECT * FROM budget_targets WHERE (year = ? AND month = ?) OR (year < ? OR (year = ? AND month < ?)) ORDER BY year DESC, month DESC LIMIT 1',
+    [year, month, year, year, month],
     (err, budget) => {
       if (err) {
         res.status(500).json({ error: err.message });
