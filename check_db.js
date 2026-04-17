@@ -9,4 +9,4 @@ db.all("SELECT * FROM bank_transactions", [], (err, rows) => {
     console.log('Sample rows:', rows.slice(0, 3));
   }
   db.close();
-});
+}); 

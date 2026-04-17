@@ -146,6 +146,43 @@
           </div>
         </div>
 
+        <div class="visualization-section">
+          <h3>Bank Statement Visualizations</h3>
+          <div class="analytics-controls">
+            <button class="btn btn-primary" onclick="generateBankVisualizations()">🔄 Refresh Charts</button>
+          </div>
+
+          <div class="chart-grid">
+            <div class="chart-container">
+              <h4>Transaction Types</h4>
+              <div id="bankTransactionTypesChart" class="chart">
+                <p class="loading-text">Loading chart...</p>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <h4>Monthly Flow</h4>
+              <div id="bankMonthlyFlowChart" class="chart">
+                <p class="loading-text">Loading chart...</p>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <h4>Balance Trend</h4>
+              <div id="bankBalanceTrendChart" class="chart">
+                <p class="loading-text">Loading chart...</p>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <h4>Spending by Category</h4>
+              <div id="bankCategoryBreakdownChart" class="chart">
+                <p class="loading-text">Loading chart...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="transactions-section">
           <h3>Recent Transactions</h3>
           <div id="bankTransactions" class="bank-transactions">

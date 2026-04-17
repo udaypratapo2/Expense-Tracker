@@ -955,6 +955,195 @@ except Exception as e:
   });
 });
 
+// ============= BANK STATEMENT VISUALIZATION ENDPOINTS =============
+
+// Get bank transaction types pie chart
+app.get('/api/bank-statement/charts/transaction-types', (req, res) => {
+  const chartPath = path.join(__dirname, 'public/charts/bank_transaction_types.png');
+  
+  // Check if chart exists, if not generate it
+  if (!fs.existsSync(chartPath)) {
+    const pythonScript = `
+import sys
+sys.path.insert(0, '.')
+from visualize import generate_bank_transaction_type_pie
+result = generate_bank_transaction_type_pie()
+print('done')
+`;
+    
+    const python = spawn('python', ['-c', pythonScript]);
+    let error = '';
+
+    python.stderr.on('data', (data) => {
+      error += data.toString();
+    });
+
+    python.on('close', (code) => {
+      if (code === 0 && fs.existsSync(chartPath)) {
+        res.sendFile(chartPath);
+      } else {
+        res.status(500).json({ error: 'Failed to generate chart', details: error });
+      }
+    });
+  } else {
+    res.sendFile(chartPath);
+  }
+});
+
+// Get bank monthly flow chart
+app.get('/api/bank-statement/charts/monthly-flow', (req, res) => {
+  const chartPath = path.join(__dirname, 'public/charts/bank_monthly_flow.png');
+  
+  // Check if chart exists, if not generate it
+  if (!fs.existsSync(chartPath)) {
+    const pythonScript = `
+import sys
+sys.path.insert(0, '.')
+from visualize import generate_bank_monthly_flow
+result = generate_bank_monthly_flow()
+print('done')
+`;
+    
+    const python = spawn('python', ['-c', pythonScript]);
+    let error = '';
+
+    python.stderr.on('data', (data) => {
+      error += data.toString();
+    });
+
+    python.on('close', (code) => {
+      if (code === 0 && fs.existsSync(chartPath)) {
+        res.sendFile(chartPath);
+      } else {
+        res.status(500).json({ error: 'Failed to generate chart', details: error });
+      }
+    });
+  } else {
+    res.sendFile(chartPath);
+  }
+});
+
+// Get bank balance trend chart
+app.get('/api/bank-statement/charts/balance-trend', (req, res) => {
+  const chartPath = path.join(__dirname, 'public/charts/bank_balance_trend.png');
+  
+  // Check if chart exists, if not generate it
+  if (!fs.existsSync(chartPath)) {
+    const pythonScript = `
+import sys
+sys.path.insert(0, '.')
+from visualize import generate_bank_balance_trend
+result = generate_bank_balance_trend()
+print('done')
+`;
+    
+    const python = spawn('python', ['-c', pythonScript]);
+    let error = '';
+
+    python.stderr.on('data', (data) => {
+      error += data.toString();
+    });
+
+    python.on('close', (code) => {
+      if (code === 0 && fs.existsSync(chartPath)) {
+        res.sendFile(chartPath);
+      } else {
+        res.status(500).json({ error: 'Failed to generate chart', details: error });
+      }
+    });
+  } else {
+    res.sendFile(chartPath);
+  }
+});
+
+// Get bank category breakdown chart
+app.get('/api/bank-statement/charts/category-breakdown', (req, res) => {
+  const chartPath = path.join(__dirname, 'public/charts/bank_category_breakdown.png');
+  
+  // Check if chart exists, if not generate it
+  if (!fs.existsSync(chartPath)) {
+    const pythonScript = `
+import sys
+sys.path.insert(0, '.')
+from visualize import generate_bank_category_breakdown
+result = generate_bank_category_breakdown()
+print('done')
+`;
+    
+    const python = spawn('python', ['-c', pythonScript]);
+    let error = '';
+
+    python.stderr.on('data', (data) => {
+      error += data.toString();
+    });
+
+    python.on('close', (code) => {
+      if (code === 0 && fs.existsSync(chartPath)) {
+        res.sendFile(chartPath);
+      } else {
+        res.status(500).json({ error: 'Failed to generate chart', details: error });
+      }
+    });
+  } else {
+    res.sendFile(chartPath);
+  }
+});
+
+// Regenerate bank statement visualizations
+app.post('/api/bank-statement/charts/regenerate', (req, res) => {
+  // Delete existing bank charts
+  const chartsDir = path.join(__dirname, 'public/charts');
+  if (fs.existsSync(chartsDir)) {
+    fs.readdirSync(chartsDir).forEach(file => {
+      if (file.startsWith('bank_')) {
+        fs.unlinkSync(path.join(chartsDir, file));
+      }
+    });
+  }
+
+  // Generate new bank charts
+  const pythonScript = `
+import sys
+sys.path.insert(0, '.')
+from visualize import generate_bank_transaction_type_pie, generate_bank_monthly_flow, generate_bank_balance_trend, generate_bank_category_breakdown
+
+try:
+    generate_bank_transaction_type_pie()
+    generate_bank_monthly_flow()
+    generate_bank_balance_trend()
+    generate_bank_category_breakdown()
+    print('success')
+except Exception as e:
+    print(f'error: {str(e)}')
+`;
+
+  const python = spawn('python', ['-c', pythonScript]);
+  let output = '';
+  let error = '';
+
+  python.stdout.on('data', (data) => {
+    output += data.toString();
+  });
+
+  python.stderr.on('data', (data) => {
+    error += data.toString();
+  });
+
+  python.on('close', (code) => {
+    if (code === 0 && output.includes('success')) {
+      res.json({ 
+        success: true,
+        message: 'Bank statement visualizations regenerated successfully'
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Failed to regenerate bank visualizations',
+        details: error
+      });
+    }
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

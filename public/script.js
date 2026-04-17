@@ -598,6 +598,7 @@ async function loadBankInsights() {
     const data = await response.json();
     displayBankInsights(data);
     displayBankTransactions(data.recentTransactions || []);
+    loadBankCharts(); // Load visualizations
     loadResetFiles();
   } catch (error) {
     console.error('Error:', error);
@@ -697,8 +698,90 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m]);
 }
 
+// ============= BANK STATEMENT VISUALIZATIONS =============
+
+async function generateBankVisualizations() {
+  try {
+    showNotification('Generating bank statement visualizations...', 'info');
+    
+    const response = await fetch(`${API_BASE}/bank-statement/charts/regenerate`, {
+      method: 'POST'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to generate visualizations');
+    }
+    
+    const result = await response.json();
+    showNotification('Bank visualizations generated successfully!', 'success');
+    
+    // Reload all charts
+    loadBankCharts();
+  } catch (error) {
+    console.error('Error generating visualizations:', error);
+    showNotification('Failed to generate visualizations', 'error');
+  }
+}
+
+async function loadBankCharts() {
+  loadBankTransactionTypesChart();
+  loadBankMonthlyFlowChart();
+  loadBankBalanceTrendChart();
+  loadBankCategoryBreakdownChart();
+}
+
+async function loadBankTransactionTypesChart() {
+  const chartDiv = document.getElementById('bankTransactionTypesChart');
+  try {
+    // First try to trigger chart generation
+    await fetch(`${API_BASE}/bank-statement/charts/transaction-types`);
+    
+    // Then set the image src
+    const imageUrl = `${API_BASE}/bank-statement/charts/transaction-types?t=${Date.now()}`;
+    chartDiv.innerHTML = `<img src="${imageUrl}" alt="Transaction Types Chart" onload="this.style.display='block'" onerror="this.parentElement.innerHTML='<p class=\"loading-text\">No data available</p>'" style="display:none;">`;
+  } catch (error) {
+    console.error('Error loading transaction types chart:', error);
+    chartDiv.innerHTML = '<p class="loading-text">Error loading chart</p>';
+  }
+}
+
+async function loadBankMonthlyFlowChart() {
+  const chartDiv = document.getElementById('bankMonthlyFlowChart');
+  try {
+    await fetch(`${API_BASE}/bank-statement/charts/monthly-flow`);
+    const imageUrl = `${API_BASE}/bank-statement/charts/monthly-flow?t=${Date.now()}`;
+    chartDiv.innerHTML = `<img src="${imageUrl}" alt="Monthly Flow Chart" onload="this.style.display='block'" onerror="this.parentElement.innerHTML='<p class=\"loading-text\">No data available</p>'" style="display:none;">`;
+  } catch (error) {
+    console.error('Error loading monthly flow chart:', error);
+    chartDiv.innerHTML = '<p class="loading-text">Error loading chart</p>';
+  }
+}
+
+async function loadBankBalanceTrendChart() {
+  const chartDiv = document.getElementById('bankBalanceTrendChart');
+  try {
+    await fetch(`${API_BASE}/bank-statement/charts/balance-trend`);
+    const imageUrl = `${API_BASE}/bank-statement/charts/balance-trend?t=${Date.now()}`;
+    chartDiv.innerHTML = `<img src="${imageUrl}" alt="Balance Trend Chart" onload="this.style.display='block'" onerror="this.parentElement.innerHTML='<p class=\"loading-text\">No data available</p>'" style="display:none;">`;
+  } catch (error) {
+    console.error('Error loading balance trend chart:', error);
+    chartDiv.innerHTML = '<p class="loading-text">Error loading chart</p>';
+  }
+}
+
+async function loadBankCategoryBreakdownChart() {
+  const chartDiv = document.getElementById('bankCategoryBreakdownChart');
+  try {
+    await fetch(`${API_BASE}/bank-statement/charts/category-breakdown`);
+    const imageUrl = `${API_BASE}/bank-statement/charts/category-breakdown?t=${Date.now()}`;
+    chartDiv.innerHTML = `<img src="${imageUrl}" alt="Category Breakdown Chart" onload="this.style.display='block'" onerror="this.parentElement.innerHTML='<p class=\"loading-text\">No data available</p>'" style="display:none;">`;
+  } catch (error) {
+    console.error('Error loading category breakdown chart:', error);
+    chartDiv.innerHTML = '<p class="loading-text">Error loading chart</p>';
+  }
+}
+
 function showNotification(message, type = 'info') {
-  // Create notification element
   const notification = document.createElement('div');
   notification.style.cssText = `
     position: fixed;

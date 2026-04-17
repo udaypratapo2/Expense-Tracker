@@ -721,6 +721,20 @@ header p {
   color: var(--primary-color);
 }
 
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.chart-container h4 {
+  margin-bottom: 15px;
+  color: var(--text-color);
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
 .analytics-stats {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
